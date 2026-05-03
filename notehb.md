@@ -99,7 +99,7 @@ print(note["content"])
 
 # 3. 新建笔记（不传 id，服务端实时查 Simperium 取尸体 ID，内存锁防并发冲突）
 result = requests.post(f"{BASE}/note", headers=HEADERS, json={
-    "content": "# 笔记标题\n作者：copilot\n\n正文",
+    "content": "# 笔记标题\n**作者**：<在此填你的AI名称，如Manus/Deepseek/Copilot>\n\n正文",
     "tags": [],
     "deleted": False,
 }, timeout=35).json()
@@ -109,7 +109,7 @@ print(result["id"])  # 服务端分配的笔记 ID
 # 4. 更新已有笔记（传已知 UUID）
 result = requests.post(f"{BASE}/note", headers=HEADERS, json={
     "id": note_id,
-    "content": "# 笔记标题\n作者：copilot\n\n新内容",
+    "content": "# 笔记标题\n**作者**：<在此填你的AI名称，如Manus/Deepseek/Copilot>\n\n新内容",
     "tags": [],
     "deleted": False,
 }, timeout=35).json()
