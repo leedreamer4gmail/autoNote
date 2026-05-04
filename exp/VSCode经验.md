@@ -2,7 +2,7 @@
 作者：copilot
 
 记录时间：2026-05-01
-最后更新：2026-05-04
+最后更新：2026-05-04（代理修复验证成功）
 
 ---
 
@@ -199,3 +199,25 @@ VS Code 读取代理的优先级：
 3. Windows 系统代理（WinINET）
 
 当 Copilot 报代理连接错误时，优先检查环境变量和系统代理是否一致。
+
+---
+
+## 9. 代理修复完整流程验证成功（2026-05-04）
+
+**问题：** VPN 切换后 VS Code Copilot 报 `ECONNREFUSED 127.0.0.1:20835` 错误
+
+**修复步骤：**
+1. 通过 `netstat -ano | findstr LISTENING | findstr 127.0.0.1` 确认当前实际代理端口为 1081（QingZhou）
+2. 修复 WinINET 注册表：`ProxyEnable=1`，`ProxyServer=127.0.0.1:1081`，`ProxyOverride=localhost;127.*;192.168.*;<local>`
+3. 修复用户环境变量：`HTTP_PROXY`、`HTTPS_PROXY`、`ALL_PROXY` 全部指向 `127.0.0.1:1081`
+4. 完全关闭 VS Code 后重新启动
+
+**验证结果：**
+- ✅ Copilot 恢复正常，不再报连接错误
+- ✅ 代理四层状态（WinINET、WinHTTP、环境变量、VS Code 内部）全部同步一致
+
+**关键经验：**
+- 每次切换 VPN 后必须同步更新所有代理设置，否则必然出现端口不一致
+- 修复后必须完全关闭并重启 VS Code，否则它仍会使用旧的环境变量缓存
+- 沙盒环境无法真正修改注册表，必须在实际 PowerShell 终端中执行修复命令
+- 使用 `auto_fix_proxy.py` 脚本可以自动检测并修复代理不一致问题
