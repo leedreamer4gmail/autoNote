@@ -1,0 +1,15 @@
+[2026-05-02 00:05:44] ERROR POST /note id=bb4bfbb7-53fe-422e-8f64-36061f484006 sim=412 resp=
+[2026-05-02 00:12:27] ERROR POST /note id=bb4bfbb7-53fe-422e-8f64-36061f484006 sim=412 resp=
+[2026-05-02 00:12:35] ERROR POST /note id=bb4bfbb7-53fe-422e-8f64-36061f484006 sim=412 resp=
+[2026-05-02 00:12:38] ERROR POST /note id=bb4bfbb7-53fe-422e-8f64-36061f484006 sim=412 resp=
+[2026-05-02 01:47:09] ERROR DELETE /note id=bb4bfbb7-53fe-422e-8f64-36061f484006 verify GET=502
+[2026-05-02 02:56:31] ERROR sim_request POST /i/【从 http://8.219.6.216:8888/ 刷新尸体列表获取】?response=1: URL can't contain control characters. '/1/chalk-bump-f49/note/i/【从 http://8.219.6.216:8888/ 刷新尸体列表获取】?response=1' (found at least ' ')
+[2026-05-02 02:56:32] ERROR sim_request GET /i/【从 http://8.219.6.216:8888/ 刷新尸体列表获取】: URL can't contain control characters. '/1/chalk-bump-f49/note/i/【从 http://8.219.6.216:8888/ 刷新尸体列表获取】' (found at least ' ')
+[2026-05-02 02:56:32] ERROR POST /note id=【从 http://8.219.6.216:8888/ 刷新尸体列表获取】 verify GET=503
+[2026-05-02 02:57:10] ERROR sim_request POST /i/【从 http://8.219.6.216:8888/ 刷新尸体列表获取】?response=1: URL can't contain control characters. '/1/chalk-bump-f49/note/i/【从 http://8.219.6.216:8888/ 刷新尸体列表获取】?response=1' (found at least ' ')
+[2026-05-02 02:57:11] ERROR sim_request GET /i/【从 http://8.219.6.216:8888/ 刷新尸体列表获取】: URL can't contain control characters. '/1/chalk-bump-f49/note/i/【从 http://8.219.6.216:8888/ 刷新尸体列表获取】' (found at least ' ')
+[2026-05-02 02:57:11] ERROR POST /note id=【从 http://8.219.6.216:8888/ 刷新尸体列表获取】 verify GET=503
+[2026-05-02 03:34:45] ERROR POST /note id=aa111111-1111-1111-1111-111111111111 verify GET=404
+[2026-05-02 03:34:55] ERROR POST /note id=be66810b-a198-46ad-851c-53d36dff2ec7 verify GET=404
+[2026-05-02 14:01:44] ERROR POST /note id=aa111111-1111-1111-1111-111111111111 verify GET=404
+[2026-05-02 14:02:00] ERROR POST /note id=aa111111-1111-1111-1111-111111111111 verify GET=404

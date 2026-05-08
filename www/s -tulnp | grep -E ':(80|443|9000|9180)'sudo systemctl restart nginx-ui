@@ -1,0 +1,45 @@
+[0;1;32m●[0m nginx.service - A high performance web server and a reverse proxy server
+     Loaded: loaded (]8;;file://iZt4ne6f840hh26fkbytunZ/usr/lib/systemd/system/nginx.service/usr/lib/systemd/system/nginx.service]8;;; [0;1;32menabled[0m; preset: [0;1;32menabled[0m)
+     Active: [0;1;32mactive (running)[0m since Sat 2026-05-02 00:14:44 CST; 1 day 22h ago
+       Docs: ]8;;man:nginx(8)man:nginx(8)]8;;
+   Main PID: 7326 (nginx)
+      Tasks: 3 (limit: 1853)
+     Memory: 2.6M (peak: 5.3M)
+        CPU: 321ms
+     CGroup: /system.slice/nginx.service
+             ├─[0;38;5;245m 7326 "nginx: master process /usr/sbin/nginx -g daemon on; master_process on;"[0m
+             ├─[0;38;5;245m32700 "nginx: worker process"[0m
+             └─[0;38;5;245m32702 "nginx: worker process"[0m
+
+May 03 21:13:42 iZt4ne6f840hh26fkbytunZ systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+May 03 21:14:06 iZt4ne6f840hh26fkbytunZ systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+May 03 21:14:06 iZt4ne6f840hh26fkbytunZ nginx[32252]: 2026/05/03 21:14:06 [notice] 32252#32252: signal process started
+May 03 21:14:06 iZt4ne6f840hh26fkbytunZ systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+May 03 21:14:26 iZt4ne6f840hh26fkbytunZ systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+May 03 21:14:26 iZt4ne6f840hh26fkbytunZ nginx[32418]: 2026/05/03 21:14:26 [notice] 32418#32418: signal process started
+May 03 21:14:26 iZt4ne6f840hh26fkbytunZ systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+May 03 21:15:13 iZt4ne6f840hh26fkbytunZ systemd[1]: Reloading nginx.service - A high performance web server and a reverse proxy server...
+May 03 21:15:13 iZt4ne6f840hh26fkbytunZ nginx[32699]: 2026/05/03 21:15:13 [notice] 32699#32699: signal process started
+May 03 21:15:13 iZt4ne6f840hh26fkbytunZ systemd[1]: Reloaded nginx.service - A high performance web server and a reverse proxy server.
+
+[0;1;32m●[0m nginx-ui.service - Yet another WebUI for Nginx
+     Loaded: loaded (]8;;file://iZt4ne6f840hh26fkbytunZ/etc/systemd/system/nginx-ui.service/etc/systemd/system/nginx-ui.service]8;;; [0;1;32menabled[0m; preset: [0;1;32menabled[0m)
+     Active: [0;1;32mactive (running)[0m since Sun 2026-05-03 22:12:37 CST; 12min ago
+       Docs: ]8;;https://github.com/0xJacky/nginx-uihttps://github.com/0xJacky/nginx-ui]8;;
+   Main PID: 33769 (nginx-ui)
+      Tasks: 10 (limit: 1853)
+     Memory: 187.3M (peak: 212.6M)
+        CPU: 2.909s
+     CGroup: /system.slice/nginx-ui.service
+             └─[0;38;5;245m33769 /usr/local/bin/nginx-ui --config /usr/local/etc/nginx-ui/app.ini[0m
+
+May 03 22:22:47 iZt4ne6f840hh26fkbytunZ nginx-ui[33769]: [GIN] 2026/05/03 - 22:22:47 | 200 | 89.378µs | 219.124.146.135 | GET      "/assets/MailOutlined-CPRgyb1F.js"
+May 03 22:22:47 iZt4ne6f840hh26fkbytunZ nginx-ui[33769]: [GIN] 2026/05/03 - 22:22:47 | 200 | 228.458µs | 219.124.146.135 | GET      "/assets/steps-BqDLevHJ.js"
+May 03 22:22:47 iZt4ne6f840hh26fkbytunZ nginx-ui[33769]: [GIN] 2026/05/03 - 22:22:47 | 200 |  79.67µs | 219.124.146.135 | GET      "/assets/backup-gdviEyN2.js"
+May 03 22:22:47 iZt4ne6f840hh26fkbytunZ nginx-ui[33769]: [GIN] 2026/05/03 - 22:22:47 | 200 | 207.863µs | 219.124.146.135 | GET      "/assets/SystemRestoreContent-Dmyjsxgh.js"
+May 03 22:22:48 iZt4ne6f840hh26fkbytunZ nginx-ui[33769]: [GIN] 2026/05/03 - 22:22:48 | 200 | 102.049µs | 219.124.146.135 | GET      "/api/install"
+May 03 22:22:48 iZt4ne6f840hh26fkbytunZ nginx-ui[33769]: [GIN] 2026/05/03 - 22:22:48 | 200 | 446.105µs | 219.124.146.135 | GET      "/favicon.ico"
+May 03 22:22:49 iZt4ne6f840hh26fkbytunZ nginx-ui[33769]: [GIN] 2026/05/03 - 22:22:49 | 200 | 74.495µs | 219.124.146.135 | GET      "/favicon-32x32.png"
+May 03 22:22:54 iZt4ne6f840hh26fkbytunZ nginx-ui[33769]: [GIN] 2026/05/03 - 22:22:54 | 200 | 168.366µs |  172.235.193.21 | POST     "/api/crypto/public_key"
+May 03 22:22:55 iZt4ne6f840hh26fkbytunZ nginx-ui[33769]: 2026-05-03 22:22:55.793        ERROR        middleware/install_secret.go:53        installation is not allowed after 10 minutes of system startup
+May 03 22:22:55 iZt4ne6f840hh26fkbytunZ nginx-ui[33769]: [GIN] 2026/05/03 - 22:22:55 | 500 | 202.459µs |  172.235.193.21 | POST     "/api/setup/install"
