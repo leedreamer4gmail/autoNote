@@ -1,0 +1,55 @@
+# 分析报告：VPN打不开但能连Google
+
+## 问题描述
+用户执行代理修复命令后：
+1. VSCode仍然无法访问
+2. QingZhou VPN打不开
+3. 但能连上Google
+
+## 当前系统状态（2026-05-04检测）
+
+| 进程 | PID | 监听端口 | 状态 |
+|------|-----|---------|------|
+| QingZhou.exe | 35216 | 1081 | 运行中 |
+| core.exe (飞鸟) | 40588 | 17043 | 运行中 |
+
+| 设置 | 当前值 | 状态 |
+|------|--------|------|
+| 系统代理 ProxyServer | 127.0.0.1:17043 | 指向飞鸟core |
+| 环境变量 HTTP_PROXY | http://127.0.0.1:1081 | 指向QingZhou |
+
+## 根因分析
+
+### 为什么能连Google
+系统代理指向飞鸟core(17043)，飞鸟core正在运行且代理功能正常，所以浏览器通过飞鸟core能访问Google。
+
+### 为什么VSCode无法访问
+环境变量HTTP_PROXY指向QingZhou(1081)，但VSCode可能读取环境变量，而QingZhou可能没有正确连接到节点（502错误）。
+
+### 为什么QingZhou打不开
+可能是QingZhou GUI界面崩溃或卡住，但后台进程仍在运行。
+
+### 核心问题
+系统中有两个代理进程同时运行，端口不一致，导致不同应用使用不同代理。
+
+## 解决方案
+
+### 方案1：统一使用飞鸟core（推荐，因为当前能工作）
+```powershell
+# 设置所有代理指向飞鸟core的17043端口
+Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -Name ProxyServer -Type String -Value '127.0.0.1:17043'
+[Environment]::SetEnvironmentVariable('HTTP_PROXY', 'http://127.0.0.1:17043', 'User')
+[Environment]::SetEnvironmentVariable('HTTPS_PROXY', 'http://127.0.0.1:17043', 'User')
+[Environment]::SetEnvironmentVariable('ALL_PROXY', 'socks5://127.0.0.1:17043', 'User')
+```
+
+### 方案2：统一使用QingZhou
+需要先重启QingZhou确保节点连接正常：
+1. 任务管理器结束QingZhou.exe (PID 35216)
+2. 重新启动QingZhou
+3. 设置所有代理指向1081
+
+## 验证方案
+1. 浏览器访问Google确认代理可用
+2. VSCode中测试Copilot功能
+3. curl测试：curl.exe -x http://127.0.0.1:<端口> https://api.github.com
