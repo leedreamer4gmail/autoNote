@@ -1,6 +1,6 @@
-﻿﻿# notehb — Simplenote/Simperium 使用手册
+﻿﻿# notehb — autoNote 使用手册
 作者：copilot, Goose
-版本：1.5
+版本：2.0
 
 > 云端笔记 ID：`d3a2198d-b531-4797-995f-79f6add64673`  
 > 云端为准，每次修改后必须同步。本地文件路径不固定，以实际工作目录为准。
@@ -37,7 +37,7 @@
 
 ## 0. 首选方案：transNote 中继服务
 
-> 任何 AI / Agent / 程序读写在线笔记，默认走 `其他软件 -> transNote -> Simplenote`。只有 transNote 服务不可用时，才退回后文的直接 Simperium API。
+> 任何 AI / Agent / 程序读写在线笔记，默认走 `其他软件 -> transNote -> autoNote(Simplenote)`。只有 transNote 服务不可用时，才退回后文的直接 Simperium API。
 
 ### 连接层次
 
@@ -62,7 +62,7 @@ X-Api-Key: simpleNote888
 
 | 项目 | 值 |
 |------|-----|
-| 服务器脚本 | `/home/project/simpleNote/transNote.py` |
+| 服务器脚本 | `/home/project/autoNote/transNote.py` |
 | systemd 服务 | `transnote` |
 | 尸体清单缓存 | 无文件缓存，`/crops` 接口实时查 Simperium |
 
@@ -242,7 +242,7 @@ for it in r.json()['index']:
 
 ## 笔记格式规范
 
-所有云端笔记（Simplenote）的格式规定：
+所有云端笔记（autoNote / 原 Simplenote）的格式规定：
 
 - 第一行：`# 笔记标题`，标题必须与本地文件名一致（不含 .md 后缀）
 - 第二行：`作者：xxx`，**必须写实际创作这篇笔记的 AI 或人的名称**，填写规则：
@@ -407,9 +407,9 @@ Invoke-RestMethod -Method POST -Uri "$appUrl/i/{笔记ID}" `
 
 | 坑 | 现象 | 根因 | 解法 |
 |----|------|------|------|
-| 1 | StackEdit 无法在 VS Code 内嵌浏览器登录 | Google OAuth 弹窗被 CORS 拦截 | 改用 Simplenote |
-| 2 | Simplenote reCAPTCHA 超时 | 图片验证不够快 | 点完立即点 Verify，可能多轮 |
-| 3 | HackMD API 只有 10 次免费额度 | 免费版限制 | 改用 Simplenote（无限制） |
+| 1 | StackEdit 无法在 VS Code 内嵌浏览器登录 | Google OAuth 弹窗被 CORS 拦截 | 改用 autoNote（原 Simplenote 平台） |
+| 2 | autoNote reCAPTCHA 超时 | 图片验证不够快 | 点完立即点 Verify，可能多轮 |
+| 3 | HackMD API 只有 10 次免费额度 | 免费版限制 | 改用 autoNote（原 Simplenote 平台） |
 | 4 | auth.simperium.com 间歇性 502 | 认证服务不稳定 | 改从浏览器 localStorage 提取 token |
 | 5 | PowerShell `ConvertTo-Json` → 413 | 中文变 `\uXXXX`，体积爆炸 | 手动转义拼 JSON 字符串 |
 | 6 | Python `requests` 的 `json=` 参数 → 400 | `ensure_ascii=True` + Content-Type 缺 charset | 用 `json.dumps(..., ensure_ascii=False)` + `data=` |
@@ -518,7 +518,7 @@ def rollback(note_id, local_path, name):
 ```bash
 sudo systemctl status transnote     # 查看状态
 sudo systemctl restart transnote    # 重启
-tail -50 /home/project/simpleNote/transNote.log  # 查日志
+tail -50 /home/project/autoNote/transNote.log  # 查日志
 ```
 
 ### 当 AI 无法访问网络时 — Web 前端上传方案（Kimi 场景）
@@ -544,9 +544,9 @@ tail -50 /home/project/simpleNote/transNote.log  # 查日志
 | 后备地址 | `http://8.219.6.216:8888`（直连，需安全组放行） |
 | 本地直连 | `http://127.0.0.1:8888`（仅服务器内调试） |
 | 鉴权 Header | `X-Api-Key: simpleNote888` |
-| 服务器路径 | `/home/project/simpleNote/transNote.py` |
+| 服务器路径 | `/home/project/autoNote/transNote.py` |
 | systemd 服务名 | `transnote` |
-| 日志 | `/home/project/simpleNote/transNote.log` |
+| 日志 | `/home/project/autoNote/transNote.log` |
 | 健康检查 | `GET /health`（首选/后备/本地均可，不需要鉴权） |
 
 ### 接口一览
@@ -690,7 +690,7 @@ Invoke-RestMethod "https://leedreamer.cn/transnote/notes" -Headers @{"X-Api-Key"
 ```bash
 sudo systemctl status transnote     # 查看状态
 sudo systemctl restart transnote    # 重启
-tail -50 /home/project/simpleNote/transNote.log  # 查日志
+tail -50 /home/project/autoNote/transNote.log  # 查日志
 ```
 
 ### 当 AI 无法访问网络时 — Web 前端上传方案（Kimi 场景）
