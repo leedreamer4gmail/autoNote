@@ -1,55 +1,48 @@
-# 分析报告：VPN打不开但能连Google
+# 分析报告：autoNote 重新开发为简单自建笔记系统
 
-## 问题描述
-用户执行代理修复命令后：
-1. VSCode仍然无法访问
-2. QingZhou VPN打不开
-3. 但能连上Google
+## 结论
 
-## 当前系统状态（2026-05-04检测）
+之前的方案过度围绕 Simplenote、同步、适配器和复杂字段展开，已经偏离“像从兜里掏出笔记本一样简单”的目标。这次改成自建主系统：本地 SQLite 是唯一主库，笔记内容用 Markdown 原文保存，外部平台相关工具全部放到 `outside/`，不参与主流程。
 
-| 进程 | PID | 监听端口 | 状态 |
-|------|-----|---------|------|
-| QingZhou.exe | 35216 | 1081 | 运行中 |
-| core.exe (飞鸟) | 40588 | 17043 | 运行中 |
+## 新系统边界
 
-| 设置 | 当前值 | 状态 |
-|------|--------|------|
-| 系统代理 ProxyServer | 127.0.0.1:17043 | 指向飞鸟core |
-| 环境变量 HTTP_PROXY | http://127.0.0.1:1081 | 指向QingZhou |
+- 主服务：`app.py`
+- 主库：`notedb.db`
+- 前台：`www/index.html`
+- 人工上传：`www/manual.html`
+- AI/程序手册：`www/autonotehb.md`
+- 外部平台迁移：`outside/`
 
-## 根因分析
+## 数据库简化
 
-### 为什么能连Google
-系统代理指向飞鸟core(17043)，飞鸟core正在运行且代理功能正常，所以浏览器通过飞鸟core能访问Google。
+`notes` 表只保留：`id`、`user`、`folder`、`content`、`tag`、`enable`、`created_at`、`updated_at`。
 
-### 为什么VSCode无法访问
-环境变量HTTP_PROXY指向QingZhou(1081)，但VSCode可能读取环境变量，而QingZhou可能没有正确连接到节点（502错误）。
+不存 `title`。标题由前端或 API 从 Markdown 第一行临时取出。
 
-### 为什么QingZhou打不开
-可能是QingZhou GUI界面崩溃或卡住，但后台进程仍在运行。
+## Lucy 工作方式
 
-### 核心问题
-系统中有两个代理进程同时运行，端口不一致，导致不同应用使用不同代理。
+Lucy 收到前台文本后：
 
-## 解决方案
+1. 从 notetools 读取同用户的有效笔记，整理成候选笔记。
+2. 读取 `www/autonotehb.md`，连同用户输入、文件夹、标签和候选笔记一起交给 LLM。
+3. LLM 只输出 JSON 决策：`new` 或 `update`、目标笔记 ID、文件夹、标签、完整 Markdown 内容和判断理由。
+4. 后端校验 LLM 决策，确认更新目标必须来自候选笔记，内容不能为空。
+5. 校验通过后，后端仍通过 notetools 函数执行新建或更新。
+6. LLM 临时不可用或输出不合格时，回退本地规则版 Lucy，前台不会断。
 
-### 方案1：统一使用飞鸟core（推荐，因为当前能工作）
-```powershell
-# 设置所有代理指向飞鸟core的17043端口
-Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings' -Name ProxyServer -Type String -Value '127.0.0.1:17043'
-[Environment]::SetEnvironmentVariable('HTTP_PROXY', 'http://127.0.0.1:17043', 'User')
-[Environment]::SetEnvironmentVariable('HTTPS_PROXY', 'http://127.0.0.1:17043', 'User')
-[Environment]::SetEnvironmentVariable('ALL_PROXY', 'socks5://127.0.0.1:17043', 'User')
-```
+Lucy 的 LLM 配置优先从环境变量读取，也支持 `frontend.conf`，最后从 `promt.md` 读取。这样符合开发文档，同时不把 notetools 写库权限交给模型。
 
-### 方案2：统一使用QingZhou
-需要先重启QingZhou确保节点连接正常：
-1. 任务管理器结束QingZhou.exe (PID 35216)
-2. 重新启动QingZhou
-3. 设置所有代理指向1081
+真实连通性测试发现 DeepSeek API 接受的模型名是小写 `deepseek-v4-flash`，而开发文档里写的是 `DeepSeek-V4-Flash`。代码已做规范化，仍然可以按开发文档读取配置。
+
+## 并发处理
+
+SQLite 开启 WAL 和 `busy_timeout`。写操作使用 `BEGIN IMMEDIATE`，进程内再加写锁，避免多用户同时操作时写事务互抢。
 
 ## 验证方案
-1. 浏览器访问Google确认代理可用
-2. VSCode中测试Copilot功能
-3. curl测试：curl.exe -x http://127.0.0.1:<端口> https://api.github.com
+
+- 语法检查：`python3 -m py_compile app.py`
+- 接口冒烟：用 Flask test client 调用健康检查、新建、列表、Lucy LLM 新建、Lucy LLM 合并、读取、失效、删除。
+- LLM 行为：测试时 monkeypatch `call_lucy_llm` 返回固定 JSON，验证 LLM 决策会通过 notetools 写库。
+- LLM 连通：用当前配置调用 DeepSeek，确认能返回可解析 JSON 决策。
+- 页面检查：启动 `python3 app.py` 后访问 `/autonote/`，确认列表、编辑、保存、Lucy、上传页面能正常调用接口。
+- 数据检查：确认生成 `notedb.db`，表内没有 `title` 字段。

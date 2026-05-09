@@ -1,0 +1,16 @@
+[Unit]
+Description=autoNote self-owned note service
+After=network.target
+
+[Service]
+Type=simple
+User=admin
+WorkingDirectory=/home/project/autoNote
+ExecStart=/usr/bin/python3 /home/project/autoNote/app.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>autoNote 上传</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:#f4f6f8;color:#1f2933;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+button,input,textarea{font:inherit}
+.wrap{max-width:980px;margin:0 auto;padding:20px}
+.top{height:56px;display:flex;align-items:center;gap:12px}
+.top h1{margin:0;font-size:20px;letter-spacing:0;color:#152238}.top a{color:#2f6b4f;text-decoration:none}
+.panel{background:#fff;border:1px solid #d8dee4;border-radius:8px;overflow:hidden}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px;border-bottom:1px solid #e5e9ef;background:#fbfcfd}
+input{height:38px;border:1px solid #cfd7df;border-radius:6px;padding:0 10px;outline:none}
+input:focus,textarea:focus{border-color:#2f6b4f;box-shadow:0 0 0 3px rgba(47,107,79,.12)}
+textarea{width:100%;min-height:52vh;border:0;resize:vertical;padding:18px;font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:15px;line-height:1.65;outline:none;color:#16202a}
+.actions{display:flex;gap:10px;align-items:center;padding:14px;border-top:1px solid #e5e9ef;background:#fff}
+.actions .grow{flex:1}.btn{height:38px;border:1px solid #cfd7df;border-radius:6px;background:#fff;color:#253242;padding:0 14px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}.btn:hover{border-color:#2f6b4f;color:#2f6b4f;background:#f8fbf9}.btn.primary{background:#2f6b4f;border-color:#2f6b4f;color:#fff}.btn.primary:hover{background:#25583f;color:#fff}
+.file{position:relative;overflow:hidden}.file input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.status{min-height:40px;padding:12px 14px;border-top:1px solid #e5e9ef;color:#697386;font-size:13px;white-space:pre-wrap}.status.ok{color:#276749}.status.err{color:#b42318}
+@media(max-width:720px){.row{grid-template-columns:1fr}.actions{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a href="/autonote/">返回</a><h1>上传笔记</h1></div>
+  <div class="panel">
+    <div class="row">
+      <input id="folder" placeholder="文件夹" autocomplete="off">
+      <input id="tags" placeholder="标签，用逗号分隔" autocomplete="off">
+    </div>
+    <textarea id="content" placeholder="# 标题&#10;&#10;Markdown 内容，或粘贴包含 content/folder/tags 的 JSON"></textarea>
+    <div class="actions">
+      <button class="btn primary" id="saveBtn">保存</button>
+      <button class="btn" id="lucyBtn">交给 Lucy</button>
+      <label class="btn file">读取文件<input type="file" id="file" accept=".md,.json,.txt"></label>
+      <span class="grow"></span>
+      <button class="btn" id="clearBtn">清空</button>
+    </div>
+    <div class="status" id="status">就绪</div>
+  </div>
+</div>
+
+<script>
+const API_KEY = '__API_KEY__';
+const USER = 'leedreamer';
+const contentEl = document.getElementById('content');
+const folderEl = document.getElementById('folder');
+const tagsEl = document.getElementById('tags');
+const statusEl = document.getElementById('status');
+
+function setStatus(text, type) {
+  statusEl.textContent = text;
+  statusEl.className = 'status ' + (type || '');
+}
+
+async function api(path, options) {
+  const headers = Object.assign({'X-Api-Key': API_KEY}, options.headers || {});
+  const resp = await fetch(path, Object.assign({}, options, {headers}));
+  const ct = resp.headers.get('content-type') || '';
+  if (!ct.includes('application/json')) {
+    throw new Error('服务暂时不可用，请稍后刷新（' + resp.status + '）');
+  }
+  return resp;
+}
+
+function tagsFromInput() {
+  return tagsEl.value.split(/[,，\s]+/).map(x => x.trim()).filter(Boolean).slice(0, 5);
+}
+
+function payloadFromScreen() {
+  const raw = contentEl.value.trim();
+  if (!raw) throw new Error('内容为空');
+  try {
+    const data = JSON.parse(raw);
+    if (data && typeof data === 'object' && data.content) {
+      return {
+        user: data.user || USER,
+        content: String(data.content),
+        text: String(data.content),
+        folder: data.folder || folderEl.value.trim(),
+        tags: data.tags || data.tag || tagsFromInput()
+      };
+    }
+  } catch (_) {}
+  return {user: USER, content: raw, text: raw, folder: folderEl.value.trim(), tags: tagsFromInput()};
+}
+
+async function saveDirect() {
+  const data = payloadFromScreen();
+  const resp = await api('/autonote/notetools/new', {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+  });
+  const result = await resp.json();
+  if (!result.ok) throw new Error(result.error || '保存失败');
+  setStatus('已保存：' + result.id, 'ok');
+}
+
+async function saveByLucy() {
+  const data = payloadFromScreen();
+  const resp = await api('/autonote/lucy/intake', {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+  });
+  const result = await resp.json();
+  if (!result.ok) throw new Error(result.error || 'Lucy 保存失败');
+  setStatus(result.action === 'update' ? 'Lucy 已合并：' + result.id : 'Lucy 已新建：' + result.id, 'ok');
+}
+
+function run(task) {
+  return async function() {
+    try { await task(); }
+    catch (err) { setStatus(err.message, 'err'); }
+  };
+}
+
+document.getElementById('saveBtn').addEventListener('click', run(saveDirect));
+document.getElementById('lucyBtn').addEventListener('click', run(saveByLucy));
+document.getElementById('clearBtn').addEventListener('click', () => { contentEl.value = ''; folderEl.value = ''; tagsEl.value = ''; setStatus('就绪', ''); });
+document.getElementById('file').addEventListener('change', event => {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => { contentEl.value = reader.result; setStatus('已读取：' + file.name, 'ok'); };
+  reader.onerror = () => setStatus('读取失败', 'err');
+  reader.readAsText(file, 'UTF-8');
+});
+</script>
+</body>
+</html>

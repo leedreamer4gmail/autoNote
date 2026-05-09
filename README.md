@@ -1,185 +1,95 @@
-# autoNote — Simplenote HTTP 代理服务
+# autoNote
 
-一个轻量级 HTTP 服务，用于通过 Simplenote API 进行笔记的读写和管理。适合集成到自动化工具、AI Agent 或第三方应用中。
+autoNote 是一个自建 Markdown 笔记经验系统。它不再把 Simplenote 当主库，笔记以 Markdown 原文存入本地 SQLite，页面显示标题时临时从 Markdown 第一行提取。
 
-## 功能特性
+## 当前结构
 
-- ✅ **HTTP 接口** — 无需直接调用 Simperium API，简化集成流程
-- ✅ **写入验证** — POST 笔记后自动回读，确保内容确实写入
-- ✅ **笔记列表** — 快速列出所有笔记、已删除笔记
-- ✅ **尸体复用** — 自动缓存已删除笔记 ID，便于新建笔记时重用
-- ✅ **API 认证** — 支持 Header 密钥认证，避免误用
-- ✅ **自动启动** — systemd 服务配置，重启自恢复
+```text
+autoNote/
+  app.py              # 主服务：Flask + SQLite + notetools + Lucy
+  notedb.db           # 运行后自动生成，本地笔记主库
+  frontend.conf       # apikey/port 配置
+  autonote.service    # systemd 服务示例
+  www/
+    index.html        # 前台笔记本界面
+    manual.html       # 人工上传页面
+    autonotehb.md     # 给 AI 和外部程序看的 notetools 手册
+    notetemplate.md   # 经验笔记 Markdown 模板
+  outside/            # 外部平台迁移工具，主系统不依赖
+```
 
-## 快速开始
+## 数据库原则
 
-### 前置条件
+`notes` 表只保留必要字段：
 
-- Python 3.7+
-- Simplenote 账号（带 Simperium 访问令牌）
+| 字段 | 说明 |
+|------|------|
+| `id` | UUID |
+| `user` | 用户 |
+| `folder` | 文件夹，可空 |
+| `content` | Markdown 原文 |
+| `tag` | JSON 数组，最多 5 个 |
+| `enable` | `T` 有效，`F` 失效 |
+| `created_at` | 创建时间 |
+| `updated_at` | 更新时间 |
 
-### 安装
+没有 `title` 字段。标题来自 `content` 的第一行 Markdown。
+
+## 启动
 
 ```bash
-git clone https://github.com/leedreamer4gmail/autoNote.git
-cd autoNote
-# 无需额外依赖，仅用标准库
+cd /home/project/autoNote
+python3 app.py
 ```
 
-### 配置
+默认端口是 `8888`。可以在 `frontend.conf` 增加：
 
-设置环境变量（或在 `frontend.conf` 中配置）：
-
-```bash
-export SIM_TOKEN="your_simperium_access_token"
-export NOTE_API_KEY="your_api_key"  # HTTP 认证密钥，默认 simpleNote888
+```ini
+apikey=simpleNote888
+port=8888
+lucy_api_key=你的LLM密钥
+lucy_base_url=https://api.deepseek.com
+lucy_model=DeepSeek-V4-Flash
 ```
 
-### 启动服务
+Lucy 的 LLM 配置读取优先级是环境变量、`frontend.conf`、`promt.md`。环境变量可用 `LUCY_API_KEY`、`LUCY_BASE_URL`、`LUCY_MODEL`，也兼容 `DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL`、`DEEPSEEK_MODEL`。`DeepSeek-V4-Flash` 这类大小写写法会在请求前自动规范化为 DeepSeek API 接受的模型名。
 
-**本地测试：**
-```bash
-python3 transNote.py
+## 页面
+
+- 首页：`/autonote/`
+- 人工上传：`/autonote/manual.html`
+- 手册：`/autonote/gethb`
+- 健康检查：`/autonote/health`
+
+## API
+
+所有写入和读取接口都需要请求头：
+
+```http
+X-Api-Key: simpleNote888
 ```
 
-**后台服务（Linux/macOS）：**
-```bash
-sudo cp transnote.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable transnote
-sudo systemctl start transnote
-sudo systemctl status transnote
-```
+### notetools
 
-## API 文档
+- `POST /autonote/notetools/new`：新建笔记
+- `POST /autonote/notetools/update`：更新笔记
+- `POST /autonote/notetools/del`：删除笔记
+- `POST /autonote/notetools/unable`：设置失效
+- `POST /autonote/notetools/read`：读取笔记
+- `POST /autonote/notetools/search`：搜索笔记
+- `GET /autonote/notetools/notes?user=leedreamer&q=关键词`：列表
 
-服务默认监听 `http://localhost:8888`，所有请求需要 Header：`X-Api-Key: <your_api_key>`
+### Lucy
 
-### 健康检查（无需认证）
+- `POST /autonote/lucy/intake`：接收前台乱文本，先找同类经验，能合并就更新，不能合并就新建。
+- `POST /autonote/lucy/draft`：只生成草稿，不写库。
 
-```
-GET /health
-→ {"status": "ok"}
-```
+Lucy 已接入 OpenAI 兼容的 LLM 接口。她会读取 `autonotehb.md`、当前输入和候选笔记，让 LLM 输出 JSON 决策；后端校验后仍然通过 notetools 函数写库。LLM 临时不可用时，服务会带错误信息回退到本地规则版，避免前台不可用。
 
-### 列出所有笔记
+## 并发
 
-```
-GET /notes
-→ [
-    {"id": "uuid-1", "title": "笔记标题1"},
-    {"id": "uuid-2", "title": "笔记标题2"}
-  ]
-```
+SQLite 开启 WAL、`busy_timeout` 和 `BEGIN IMMEDIATE` 写事务；同一进程内写入再加线程锁，避免多用户同时写时抢同一个写事务。
 
-### 列出已删除笔记（可复活）
+## 外部平台
 
-```
-GET /notes/dead
-→ [
-    {"id": "uuid-deleted", "title": "已删除的笔记"}
-  ]
-```
-
-### 读取笔记内容
-
-```
-GET /note/<note_id>
-→ {"id": "uuid", "content": "笔记内容", "tags": ["tag1", "tag2"]}
-```
-
-### 新建或更新笔记
-
-```
-POST /note
-Content-Type: application/json
-X-Api-Key: your_api_key
-
-{
-  "id": "uuid",           # 新建时可用已删除笔记的 ID，或 POST 会自动生成
-  "content": "笔记内容",
-  "tags": ["tag1", "tag2"]
-}
-
-→ {"stored_chars": 42}    # 写入后的字数
-```
-
-### 删除笔记
-
-```
-DELETE /note/<note_id>
-X-Api-Key: your_api_key
-
-→ {"deleted": true}       # 标记为删除，可通过 /notes/dead 查看
-```
-
-## 使用场景
-
-- **AI Agent 集成** — Copilot/Kimi 通过 HTTP 调用读写笔记
-- **自动化脚本** — Python/Node.js 脚本无缝对接 Simplenote
-- **多设备同步** — 将 Simplenote 作为跨平台笔记中枢
-- **监控告警** — 定时写入日志、错误信息到云笔记
-
-## 配置详解
-
-### 环境变量
-
-| 变量名 | 说明 | 默认值 |
-|--------|------|--------|
-| `SIM_TOKEN` | Simperium 访问令牌 | `2c7c5ce...` |
-| `NOTE_API_KEY` | HTTP 请求认证密钥 | `simpleNote888` |
-| `PORT` | 监听端口 | `8888` |
-
-### 文件配置（可选）
-
-创建 `frontend.conf`，格式如下：
-
-```
-apikey=your_custom_api_key
-port=9999
-```
-
-优先级：环境变量 > 配置文件 > 默认值
-
-## 故障排查
-
-### 连接被拒 (ECONNREFUSED)
-
-- 检查服务是否启动：`netstat -tuln | grep 8888`
-- 检查防火墙：`sudo ufw allow 8888`
-
-### 403 Unauthorized
-
-- 确认 Header 中 `X-Api-Key` 正确
-- 检查 `SIM_TOKEN` 是否有效（可在 https://app.simplenote.com 查看）
-
-### Simperium API 返回 412/502
-
-- 这是 Simperium 的已知行为，服务会自动验证写入
-- 如果 GET 回读内容正确，写入成功
-
-## 开发和贡献
-
-```bash
-# 查看日志
-sudo journalctl -u transnote -f
-
-# 本地测试
-python3 -m http.server 8888  # 或直接运行 python3 transNote.py
-curl -H "X-Api-Key: simpleNote888" http://localhost:8888/health
-```
-
-## 许可证
-
-MIT License
-
-## 作者
-
-**copilot** — Simplenote 云端解决方案
-
----
-
-**相关资源：**
-- [Simplenote 官网](https://simplenote.com/)
-- [Simperium API 文档](https://simperium.com/docs/)
-- [服务部署经验](exp/Python服务经验.md)
+旧 Simplenote 代理已经移到 `outside/`。autoNote 主系统不依赖外部笔记平台；需要迁移时再单独使用 `outside` 里的工具。

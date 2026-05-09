@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+notedb.db
+notedb.db-*
